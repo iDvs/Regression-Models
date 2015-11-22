@@ -1,0 +1,154 @@
+---
+title:  "Mtcars regression model"
+author: "Dmitry S."
+date: "November 22, 2015"
+output:
+  pdf_document: 
+    toc: yes
+---
+
+## Executive summary ##  
+
+In ths project we are interested in the following two questions: 
+  “Is an automatic or manual transmission better for MPG (Mile per gallon)?”
+  "Quantify the MPG difference between automatic and manual transmissions"
+I investigate that the average MPG for cars with automatic transmissions is 17.15 MPG, and the average MPG for cars with manual transmissions is 24.39 MPG.
+As we can see H0 hypotesis that there is not difference between averedge "Manual" MPG and average "Automatic" MPG must be regected.
+
+The average MPG for cars with automatic transmissions is 17.15 MPG, and the average MPG for cars with manual transmissions is 24.39 MPG. 
+In the simple model, the mean MPG difference is 7.245 MPG (the MPG of manual transmitted cars is at the average 7.245 MPG more than MPG of automatic transmitted cars);
+In the multiple regression model, the MPG difference is 2.9358 MPG (the MPG of manual transmitted cars is at the average 2.9358 MPG more than MPG of automatic transmitted cars.)if all other variables are constant. So manual transmission is better for MPG (Mile per gallon).
+
+R-squared ~ 85% or 85% of the mpg variation is explained by the multiple regression model.
+
+## Exploratory Analysis ##
+```{r  setup, cache = T, echo = F,}
+data(mtcars)
+a.mpg<-mtcars$mpg[mtcars$am==0]
+m.mpg<-mtcars$mpg[mtcars$am==1]
+```
+Summary mpg distribution sttistics for the cars with the automatic transmission
+```{r cache = T, echo = F,}
+summary(a.mpg)
+```
+Summary mpg distribution sttistics for the cars with the manual transmission
+```{r cache = T, echo = F,}
+summary(m.mpg)
+```
+As we see average mpg is different for different type of transmission. 
+
+## Simple linear regression model ## 
+
+Let's check a simple linear regression (mpg ~ am)
+```{r  cache = T, echo = F}
+fit <- lm(mpg ~ am, data = mtcars)
+coef(fit)
+```
+
+Check the H0 - null hipotesis  (that there is not difference between averedge “Manual” MPG and average “Automatic”)
+
+```{r  cache = T, echo = F}
+t.test(mpg ~ am, data = mtcars)
+```
+The p-value is 0.00137, we reject our null hypothesis (that there isn't difference between MPG for Automatic and Manual mpg), MPG for the automatic and manual transmissions is different. The MPG of manual transmitted cars is at the average 7.245 MPG higher than MPG of automatic transmitted cars.
+
+##  Multiple regression model ##
+Only 36% of the mpg variation (R-squared) is explained by the simple linear model, so we need to  the multiple regression model
+ 
+Model selection strategies: in this case I use backward selection.
+ 
+Backward elimination begins with the largest model and eliminates variables one-
+by-one until we are satisfied that all remaining variables are important to the
+model. Forward selection starts with no variables included in the model, then it
+adds in variables according to their importance until no other important variables
+are found.
+When we care about understanding which variables are statistically significant pre-
+dictors of the response, or if there is interest in producing a simpler model at the
+potential cost of a little prediction accuracy, then the p-value approach is preferred.
+In backward elimination, we would identify the predictor corresponding to the largest
+p-value. If the p-value is above the significance level, usually $\alpha$ = 0,05, then we would drop
+that variable, refit the model, and repeat the process. If the largest p-value is less than
+$\alpha$ = 0.05, then we would not eliminate any predictors and the current model would be our
+best-fitting model.
+
+Lagest model:
+
+```{r  cache = T, echo = F}
+coef(lm(formula = mpg ~., data=mtcars))
+```
+
+Optimized model with significant variables
+
+```{r  cache = T, echo = F}
+summary(t<-lm(mpg ~ wt+qsec+am, mtcars))
+```
+
+Conclusion: If all other variables are constant the MPG of manual transmitted cars is at the average 2.9358 MPG higher than MPG of automatic transmitted cars.
+R-squared ~ 85% or 85% of the mpg variation is explained by the multiple regression model.
+
+##Residuals and model diagnostics##
+
+The data points with the most leverage in the fit can be found by looking at the hatvalues() and those that influence the model coefficients the most are given by the dfbetas() function.
+
+```{r  cache = T, echo = F}
+leverage <- hatvalues(t)
+tail(sort(leverage),4)
+```
+
+```{r  cache = T, echo = F}
+influential <- dfbetas(t)
+tail(sort(influential[,4]),4)
+```
+
+All residuals plots are in Appendix  
+The points in the Residuals vs. Fitted plot are randomly scattered on the plot that verifies the independence condition.
+
+- The Normal Q-Q plot consists of the points which mostly fall on the line indicating that the residuals are normally distributed.
+
+- The Scale-Location plot consists of points scattered in a constant band pattern, indicating constant variance.
+
+- There are some distinct points of interest (outliers or leverage points) in the top right of the plots that may indicate values of increased leverage of outliers.
+
+Looking at the above results, we notice that our analysis was correct, these are the same cars as mentioned in the residual plots.
+
+## Appendix ##
+
+###Summary statistics visualization###
+
+```{r  cache = T, echo = F}
+
+library(ggplot2)
+data(mtcars)
+mtcars$am<-factor(mtcars$am,labels=c("Automatic","Manual"))
+
+box<-ggplot(mtcars, aes(x=am, y=mpg, fill=am)) + geom_boxplot() + 
+   ggtitle("Barplot MPG for different type of trasmission")
+
+hist<-ggplot(mtcars, aes(x=mpg, fill=am)) +
+  geom_histogram(binwidth =.5)+
+  ggtitle("Histogram MPG for different type of trasmission")
+
+dens<-ggplot(mtcars, aes(x=mpg, fill=am)) + geom_density(binwidth=0.5)+
+  geom_vline(aes(xintercept=mean(m.mpg, na.rm=T)))+
+  geom_vline(aes(xintercept=mean(a.mpg, na.rm=T)))+
+  ggtitle("Density of MPG for different type of trasmission")
+box
+grid.arrange(hist,dens)
+```    
+
+###Model Residuals###
+
+```{r  cache = T, echo = F}
+t<-lm(mpg ~ wt+qsec+am, mtcars)
+par(mfrow = c(2, 2))
+plot(t)
+
+```
+
+### Variables correlation ###
+
+```{r  cache = T, echo = F}
+mtcars_new <- mtcars[, c(1, 6, 7, 9)]
+par(mar = c(1, 1, 1, 1))  # set your new values 
+pairs(mtcars_new, panel = panel.smooth, col = 9 + mtcars$wt)
+```
